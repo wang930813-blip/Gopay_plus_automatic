@@ -1,5 +1,5 @@
 # Midtrans 429 Bypass Browser
-
+该脚本可过gopay的429限流，和跳过账单 直到手机号支付 ，适合个人使用
 ## What it does
 1. Takes a Stripe checkout URL (`https://pay.openai.com/c/pay/cs_live_...`)
 2. Automatically extracts `snap_token` from Stripe (no browser needed)
