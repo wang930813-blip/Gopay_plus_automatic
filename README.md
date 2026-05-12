@@ -14,6 +14,7 @@
 作者未尝试过sms api接码和批量接码，但是原理一致，都是可行的，需要用户自己改造smsapi接码的部分，仅提供了参考。
 
 本项目为免费开源，收费售卖者死冯，有问题请联系邮箱links-to@outlook.com 作者不负责任何用户的行为，该项目仅供学习交流。
+项目地址https://github.com/ywnd1144/Gopay_plus_automatic
 ---
 
 ## 它能做什么
@@ -589,6 +590,12 @@ gopay-plus/
     +-- proto/
         +-- otp.proto
 ```
+
+## 赞赏
+
+如果本项目对你有帮助，欢迎赞赏支持：
+
+<img src="images/赞赏码.jpg" width="300" />
 
 ---
 
