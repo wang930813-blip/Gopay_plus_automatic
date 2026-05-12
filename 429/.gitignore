@@ -1,0 +1,6 @@
+# Browser profile — contains cookies, extensions, login data.
+# NEVER share this folder.
+chrome_profile/
+
+__pycache__/
+*.pyc
