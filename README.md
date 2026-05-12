@@ -7,7 +7,12 @@
 你只需要提供一个 ChatGPT 的 access_token，本工具会自动完成整个 GoPay 付款流程，20 秒内激活 Plus 会员。
 
 不建议没有基础的用户自己部署，请使用gpt和claude的高级模型进行部署，根据需要具体选择场景和改造项目。
-本项目 的订阅链路百分百可行，已实践，具体的风控场景是对虚拟号码，即最后一步付款的风控，触发了反欺骗拦截。有其他问题和错误，请找ai分析！
+本项目 的订阅链路百分百可行，已实践.
+
+如遇到There's a technical error  Don't worry, we're working on it. Please try again. 这是cdn层面限流，可使用429文件内的脚本绕过，也可多次点击重试。
+当前具体的风控场景是对虚拟号码，即最后一步付款的风控，触发了反欺骗拦截，会显示Failed to proceed to GoPay Please place your order again。
+显示反欺骗拦截的，该号即无法使用gopay支付，请换号，有其他问题和错误，请找ai分析！
+
 
 注意：截止到2026年5.12日12时，单个gopay号多绑plus已行不通，目前已知最多绑定1-3个，可根据具体场景选择，
 一号一绑则无需注册whatsapp，直接注册gopay或者gojek，订阅过程中输入sms验证码即可。 
