@@ -1,0 +1,31 @@
+{
+  "gopay": {
+    "country_code": "62",
+    "phone_number": "默认手机号（不含国家码）",
+    "pin": "统一6位PIN",
+    "browser_locale": "zh-CN",
+    "pin_locale": "id"
+  },
+  "proxy": "socks5://127.0.0.1:1080",
+  "orchestrator": {
+    "port": 8800,
+    "otp_timeout": 90,
+    "auth_token": "自定义随机字符串"
+  },
+  "otp": {
+    "mode": "manual",
+    "___mode_options___": "manual | sms_api | whatsapp",
+    "sms_api": {
+      "provider": "herosms",
+      "api_key": "",
+      "base_url": "https://api.herosms.com",
+      "country": "id",
+      "service": "gopay",
+      "poll_interval_sec": 3,
+      "poll_timeout_sec": 90
+    },
+    "whatsapp": {
+      "grpc_addr": "127.0.0.1:50056"
+    }
+  }
+}
