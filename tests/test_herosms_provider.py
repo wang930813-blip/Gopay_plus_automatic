@@ -67,6 +67,22 @@ def test_match_herosms_activation_from_active_activations_rows():
     assert orch._find_herosms_activation_id(response, "81947801215") == "row-id"
 
 
+def test_extract_herosms_activations_detects_empty_active_list():
+    orch = load_orchestrator()
+    response = {
+        "status": "success",
+        "data": [],
+        "activeActivations": {
+            "affected_rows": 0,
+            "num_rows": 0,
+            "row": [],
+            "rows": [],
+        },
+    }
+
+    assert orch._extract_herosms_activations(response) == []
+
+
 def test_parse_herosms_otp_from_status_text_or_json():
     orch = load_orchestrator()
 
@@ -115,5 +131,6 @@ def test_herosms_poll_logs_each_response_summary():
     source = (ROOT / "orchestrator.py").read_text(encoding="utf-8")
 
     assert "HeroSMS active activations response" in source
+    assert "HeroSMS: no active activations found" in source
     assert "HeroSMS getStatus response" in source
     assert "def _log_response_summary" in source

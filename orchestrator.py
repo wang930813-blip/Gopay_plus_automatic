@@ -115,23 +115,33 @@ def _normalize_phone(value: str) -> str:
     return re.sub(r"\D", "", str(value or ""))
 
 
+def _extract_herosms_activations(activations) -> list:
+    if isinstance(activations, list):
+        return activations
+
+    if not isinstance(activations, dict):
+        return []
+
+    candidates = []
+    for key in ("activeActivations", "activations", "data", "items"):
+        value = activations.get(key)
+        if isinstance(value, list):
+            candidates.extend(value)
+        elif isinstance(value, dict):
+            for nested_key in ("rows", "row", "items", "data"):
+                nested = value.get(nested_key)
+                if isinstance(nested, list):
+                    candidates.extend(nested)
+
+    return candidates
+
+
 def _find_herosms_activation_id(activations, phone: str) -> str:
     target = _normalize_phone(phone)
     if not target:
         return ""
 
-    if isinstance(activations, dict):
-        candidates = []
-        for key in ("activeActivations", "activations", "data", "items"):
-            value = activations.get(key)
-            if isinstance(value, list):
-                candidates.extend(value)
-            elif isinstance(value, dict):
-                for nested_key in ("rows", "row", "items", "data"):
-                    nested = value.get(nested_key)
-                    if isinstance(nested, list):
-                        candidates.extend(nested)
-        activations = candidates or [activations]
+    activations = _extract_herosms_activations(activations) or [activations]
 
     for item in activations or []:
         if not isinstance(item, dict):
@@ -237,6 +247,11 @@ def _wait_herosms_otp(api_key: str, base_url: str, phone: str, timeout: int, pol
                     activations = json.loads(body)
                 except (json.JSONDecodeError, ValueError):
                     activations = []
+
+                active_items = _extract_herosms_activations(activations)
+                if not active_items:
+                    log.warning("HeroSMS: no active activations found for phone=***%s", phone[-4:])
+                    return ""
 
                 activation_id = _find_herosms_activation_id(activations, phone)
                 if activation_id:
