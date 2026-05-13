@@ -591,6 +591,8 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
     def log_message(self, fmt, *args):
+        if self.path.startswith("/logs"):
+            return
         log.info("HTTP %s %s", self.address_string(), fmt % args)
 
 def main():
