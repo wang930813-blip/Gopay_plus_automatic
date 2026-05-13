@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GoPay Subscribe Client</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --text: #111827;
+      --muted: #5f6b7a;
+      --line: #d9e0ea;
+      --primary: #166534;
+      --primary-hover: #14532d;
+      --danger: #b42318;
+      --success: #067647;
+      --code: #0f172a;
+      --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(24px, 4vw, 36px);
+      line-height: 1.15;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .status-pill {
+      min-width: 150px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--muted);
+      text-align: center;
+      font-weight: 700;
+      box-shadow: var(--shadow);
+    }
+
+    .status-pill.running {
+      color: #854d0e;
+      border-color: #f2c94c;
+      background: #fffbeb;
+    }
+
+    .status-pill.success {
+      color: var(--success);
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+
+    .status-pill.error {
+      color: var(--danger);
+      border-color: #fecaca;
+      background: #fff5f5;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    form {
+      padding: 20px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: #243041;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid #c9d3df;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-size: 16px;
+      line-height: 1.45;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    input {
+      min-height: 44px;
+      padding: 10px 12px;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      padding: 11px 12px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+
+    button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 800;
+      transition: transform 120ms ease, background 160ms ease, opacity 160ms ease;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+    }
+
+    .primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .secondary {
+      background: #e8eef6;
+      color: #1f2937;
+    }
+
+    .result-head {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-bottom: 1px solid var(--line);
+    }
+
+    .metric {
+      padding: 16px;
+      border-right: 1px solid var(--line);
+    }
+
+    .metric:last-child {
+      border-right: 0;
+    }
+
+    .metric span {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric strong {
+      display: block;
+      min-height: 26px;
+      font-size: 20px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .result-tools {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .result-tools h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    pre {
+      min-height: 360px;
+      max-height: 560px;
+      margin: 0;
+      padding: 16px;
+      overflow: auto;
+      background: var(--code);
+      color: #dbeafe;
+      font: 14px/1.65 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .message {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .message.error {
+      color: var(--danger);
+    }
+
+    @media (max-width: 860px) {
+      header,
+      .layout {
+        display: block;
+      }
+
+      .status-pill {
+        margin-top: 16px;
+      }
+
+      section + section {
+        margin-top: 18px;
+      }
+
+      .result-head,
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .metric {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .metric:last-child {
+        border-bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>GoPay Subscribe Client</h1>
+        <p>填写远程接口地址和请求参数，提交后在右侧查看实时等待状态与返回结果。</p>
+      </div>
+      <div id="statusPill" class="status-pill">待提交</div>
+    </header>
+
+    <div class="layout">
+      <section>
+        <form id="subscribeForm">
+          <div class="field">
+            <label for="apiUrl">请求地址</label>
+            <input id="apiUrl" name="apiUrl" type="url" value="http://localhost:8800/subscribe" required>
+          </div>
+
+          <div class="field">
+            <label for="authToken">Bearer Token</label>
+            <input id="authToken" name="authToken" type="password" placeholder="my-secret-token-123" autocomplete="off" required>
+          </div>
+
+          <div class="field">
+            <label for="sessionToken">Session Token</label>
+            <textarea id="sessionToken" name="sessionToken" placeholder="ChatGPT accessToken，通常以 eyJ... 开头" required></textarea>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="phoneNumber">手机号</label>
+              <input id="phoneNumber" name="phoneNumber" type="tel" placeholder="82222222222">
+            </div>
+
+            <div class="field">
+              <label for="pin">PIN</label>
+              <input id="pin" name="pin" type="password" inputmode="numeric" placeholder="123456" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="submitButton" class="primary" type="submit">发送请求</button>
+            <button id="resetButton" class="secondary" type="button">清空结果</button>
+          </div>
+
+          <div id="formMessage" class="message"></div>
+        </form>
+      </section>
+
+      <section>
+        <div class="result-head">
+          <div class="metric">
+            <span>HTTP 状态</span>
+            <strong id="httpStatus">-</strong>
+          </div>
+          <div class="metric">
+            <span>耗时</span>
+            <strong id="elapsed">0.0s</strong>
+          </div>
+          <div class="metric">
+            <span>业务结果</span>
+            <strong id="businessStatus">-</strong>
+          </div>
+        </div>
+
+        <div class="result-tools">
+          <h2>返回内容</h2>
+          <button id="copyButton" class="secondary" type="button">复制 JSON</button>
+        </div>
+
+        <pre id="resultBody">等待请求...</pre>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('subscribeForm');
+    const statusPill = document.getElementById('statusPill');
+    const httpStatus = document.getElementById('httpStatus');
+    const elapsed = document.getElementById('elapsed');
+    const businessStatus = document.getElementById('businessStatus');
+    const resultBody = document.getElementById('resultBody');
+    const formMessage = document.getElementById('formMessage');
+    const submitButton = document.getElementById('submitButton');
+    const resetButton = document.getElementById('resetButton');
+    const copyButton = document.getElementById('copyButton');
+
+    let timerId = null;
+    let requestStartedAt = 0;
+
+    function setStatus(text, type) {
+      statusPill.textContent = text;
+      statusPill.className = `status-pill ${type || ''}`.trim();
+    }
+
+    function startTimer() {
+      requestStartedAt = performance.now();
+      elapsed.textContent = '0.0s';
+      timerId = window.setInterval(() => {
+        const seconds = (performance.now() - requestStartedAt) / 1000;
+        elapsed.textContent = `${seconds.toFixed(1)}s`;
+      }, 100);
+    }
+
+    function stopTimer() {
+      if (timerId) {
+        window.clearInterval(timerId);
+        timerId = null;
+      }
+
+      const seconds = (performance.now() - requestStartedAt) / 1000;
+      elapsed.textContent = `${seconds.toFixed(1)}s`;
+    }
+
+    function showMessage(text, type) {
+      formMessage.textContent = text;
+      formMessage.className = `message ${type || ''}`.trim();
+    }
+
+    function resetResult() {
+      setStatus('待提交', '');
+      httpStatus.textContent = '-';
+      elapsed.textContent = '0.0s';
+      businessStatus.textContent = '-';
+      resultBody.textContent = '等待请求...';
+      showMessage('', '');
+    }
+
+    async function readResponse(response) {
+      const text = await response.text();
+
+      if (!text) {
+        return {};
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (_error) {
+        return { raw: text };
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const apiUrl = document.getElementById('apiUrl').value.trim();
+      const authToken = document.getElementById('authToken').value.trim();
+      const sessionToken = document.getElementById('sessionToken').value.trim();
+      const phoneNumber = document.getElementById('phoneNumber').value.trim();
+      const pin = document.getElementById('pin').value.trim();
+
+      if (!apiUrl || !authToken || !sessionToken) {
+        showMessage('请求地址、Bearer Token 和 Session Token 必须填写。', 'error');
+        return;
+      }
+
+      const payload = {
+        session_token: sessionToken,
+        phone_number: phoneNumber,
+        pin,
+      };
+
+      submitButton.disabled = true;
+      httpStatus.textContent = '等待中';
+      businessStatus.textContent = '请求中';
+      resultBody.textContent = JSON.stringify(payload, null, 2);
+      showMessage('请求已发送，正在等待远程服务返回。', '');
+      setStatus('请求中', 'running');
+      startTimer();
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await readResponse(response);
+        stopTimer();
+
+        httpStatus.textContent = `${response.status} ${response.statusText || ''}`.trim();
+        businessStatus.textContent = data.ok === true ? '成功' : '失败';
+        resultBody.textContent = JSON.stringify(data, null, 2);
+
+        if (response.ok && data.ok === true) {
+          setStatus('成功', 'success');
+          showMessage('远程服务已返回成功结果。', '');
+        } else {
+          setStatus('失败', 'error');
+          showMessage('远程服务返回了失败结果，请查看右侧 JSON 详情。', 'error');
+        }
+      } catch (error) {
+        stopTimer();
+        httpStatus.textContent = '请求失败';
+        businessStatus.textContent = '异常';
+        resultBody.textContent = JSON.stringify({
+          ok: false,
+          error: 'request_failed',
+          detail: error.message,
+        }, null, 2);
+        setStatus('异常', 'error');
+        showMessage('请求没有成功发出或被浏览器拦截。远程服务如跨域访问，需要允许 CORS。', 'error');
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    resetButton.addEventListener('click', resetResult);
+
+    copyButton.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(resultBody.textContent);
+      showMessage('返回内容已复制。', '');
+    });
+  </script>
+</body>
+</html>
