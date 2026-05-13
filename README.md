@@ -283,7 +283,7 @@ curl http://localhost:8800/health
     "sms_switch_countdown_sec": 30,
     // 切换到 SMS 前的等待秒数（GoPay web 端的按钮倒计时）
 
-    "sms_switch_endpoint": "",
+    "sms_switch_endpoint": "https://gwa.gopayapi.com/v1/linking/resend-otp",
     // 切换通道的 HTTP endpoint，留空用内置默认
     // 若 GoPay 接口变了，抓一次 HAR（点"改用短信"按钮时的请求）把 URL 填这里
 
@@ -430,7 +430,7 @@ python3 otp_forwarder.py      # 保持窗口开着
   "gopay": {
     "otp_channel": "sms",
     "sms_switch_countdown_sec": 30,
-    "sms_switch_endpoint": ""
+    "sms_switch_endpoint": "https://gwa.gopayapi.com/v1/linking/resend-otp"
   },
   "orchestrator": { "otp_timeout": 120 },
   "otp": {
@@ -444,7 +444,7 @@ python3 otp_forwarder.py      # 保持窗口开着
 }
 ```
 
-> `sms_switch_endpoint` 留空时使用内置默认。若 GoPay 调整了接口，抓一次 HAR（点 GoPay web 页"改用短信接收"时发出的请求），把 URL 填到 `sms_switch_endpoint`，附加字段填到 `sms_switch_body_extra`。
+> 当前内置 SMS 重发接口是 `https://gwa.gopayapi.com/v1/linking/resend-otp`，请求体只带 `reference_id`。若 GoPay 调整了接口，抓一次 HAR（点 GoPay web 页"改用短信接收"时发出的请求），把 URL 填到 `sms_switch_endpoint`，附加字段填到 `sms_switch_body_extra`。
 
 接码平台对接：
 

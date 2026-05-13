@@ -695,16 +695,16 @@ class GoPayCharger:
         触发 SMS 重发。endpoint / body 可由 gopay_cfg.sms_switch_endpoint / 
         sms_switch_body_extra 覆盖（用户抓 HAR 后填入）。
 
-        内置默认（基于 GoPay 路由模式推断，未保证永久有效）：
-            POST https://gwa.gopayapi.com/v1/linking/user-consent
-            body: {"reference_id": ..., "otp_channel": "sms"}
+        内置默认（来自 GoPay Web "改用短信接收"请求）：
+            POST https://gwa.gopayapi.com/v1/linking/resend-otp
+            body: {"reference_id": ...}
         """
         if self.sms_switch_countdown_sec > 0:
             self.log(f"[gopay] waiting {self.sms_switch_countdown_sec}s countdown before switching to SMS")
             time.sleep(self.sms_switch_countdown_sec)
 
-        url = self.sms_switch_endpoint or "https://gwa.gopayapi.com/v1/linking/user-consent"
-        body = {"reference_id": reference_id, "otp_channel": "sms"}
+        url = self.sms_switch_endpoint or "https://gwa.gopayapi.com/v1/linking/resend-otp"
+        body = {"reference_id": reference_id}
         body.update(self.sms_switch_body_extra)
         try:
             r = self.ext.post(

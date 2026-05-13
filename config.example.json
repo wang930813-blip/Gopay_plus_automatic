@@ -8,8 +8,8 @@
     "otp_channel": "whatsapp",
     "___otp_channel_options___": "whatsapp(默认) | sms；选 sms 时脚本会等倒计时后切换为 SMS 发送",
     "sms_switch_countdown_sec": 30,
-    "sms_switch_endpoint": "",
-    "___sms_switch_endpoint_hint___": "留空→用内置默认；若 GoPay 改了接口，抓 HAR 得到准确 URL 填这里",
+    "sms_switch_endpoint": "https://gwa.gopayapi.com/v1/linking/resend-otp",
+    "___sms_switch_endpoint_hint___": "GoPay Web 的改用短信接收接口；若 GoPay 改了接口，抓 HAR 得到准确 URL 填这里",
     "sms_switch_body_extra": {}
   },
   "proxy": "socks5://127.0.0.1:1080",
