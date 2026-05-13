@@ -9,7 +9,7 @@ def test_standalone_page_exists_with_remote_url_input():
     source = PAGE.read_text(encoding="utf-8")
 
     assert 'id="apiUrl"' in source
-    assert "http://142.248.136.208:8800/subscribe" in source
+    assert "https://plusapi.3737.cc.cd/subscribe" in source
     assert 'id="authToken"' in source
     assert 'value="shengzhi6666"' in source
     assert 'value="930813"' in source

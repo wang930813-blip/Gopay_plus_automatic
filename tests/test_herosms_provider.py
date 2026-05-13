@@ -109,3 +109,11 @@ def test_sms_api_timeout_uses_provider_poll_timeout_when_configured():
 
     assert orch._sms_api_timeout({"poll_timeout_sec": 300}, 90) == 300
     assert orch._sms_api_timeout({"poll_timeout_sec": ""}, 90) == 90
+
+
+def test_herosms_poll_logs_each_response_summary():
+    source = (ROOT / "orchestrator.py").read_text(encoding="utf-8")
+
+    assert "HeroSMS active activations response" in source
+    assert "HeroSMS getStatus response" in source
+    assert "def _log_response_summary" in source

@@ -244,6 +244,26 @@
       font-size: 16px;
     }
 
+    .log-panel {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .log-panel summary {
+      min-height: 48px;
+      padding: 13px 16px;
+      cursor: pointer;
+      color: #1f2937;
+      font-weight: 800;
+    }
+
+    .log-panel pre {
+      min-height: 220px;
+      max-height: 320px;
+      border-top: 1px solid var(--line);
+      background: #111827;
+      color: #d1fae5;
+    }
+
     pre {
       min-height: 360px;
       max-height: 560px;
@@ -313,7 +333,7 @@
         <form id="subscribeForm">
           <div class="field">
             <label for="apiUrl">请求地址</label>
-            <input id="apiUrl" name="apiUrl" type="url" value="http://142.248.136.208:8800/subscribe" required>
+            <input id="apiUrl" name="apiUrl" type="url" value="https://plusapi.3737.cc.cd/subscribe" required>
           </div>
 
           <div class="field">
@@ -368,6 +388,11 @@
           <button id="copyButton" class="secondary" type="button">复制 JSON</button>
         </div>
 
+        <details class="log-panel" open>
+          <summary>服务日志</summary>
+          <pre id="serviceLog">等待日志...</pre>
+        </details>
+
         <pre id="resultBody">等待请求...</pre>
       </section>
     </div>
@@ -380,12 +405,14 @@
     const elapsed = document.getElementById('elapsed');
     const businessStatus = document.getElementById('businessStatus');
     const resultBody = document.getElementById('resultBody');
+    const serviceLog = document.getElementById('serviceLog');
     const formMessage = document.getElementById('formMessage');
     const submitButton = document.getElementById('submitButton');
     const resetButton = document.getElementById('resetButton');
     const copyButton = document.getElementById('copyButton');
 
     let timerId = null;
+    let logTimerId = null;
     let requestStartedAt = 0;
 
     function setStatus(text, type) {
@@ -423,6 +450,7 @@
       elapsed.textContent = '0.0s';
       businessStatus.textContent = '-';
       resultBody.textContent = '等待请求...';
+      serviceLog.textContent = '等待日志...';
       showMessage('', '');
     }
 
@@ -437,6 +465,47 @@
         return JSON.parse(text);
       } catch (_error) {
         return { raw: text };
+      }
+    }
+
+    function buildLogUrl(apiUrl) {
+      const url = new URL(apiUrl, window.location.href);
+      if (/\/subscribe\/?$/.test(url.pathname)) {
+        url.pathname = url.pathname.replace(/\/subscribe\/?$/, '/logs');
+      } else {
+        url.pathname = '/logs';
+      }
+      url.search = 'lines=160';
+      return url.toString();
+    }
+
+    async function refreshLogs(apiUrl) {
+      const logUrl = buildLogUrl(apiUrl);
+      const response = await fetch(logUrl, {
+        headers: { Accept: 'application/json' },
+      });
+      const data = await readResponse(response);
+      if (Array.isArray(data.lines)) {
+        serviceLog.textContent = data.lines.join('\n') || '暂无日志';
+        serviceLog.scrollTop = serviceLog.scrollHeight;
+      }
+    }
+
+    function startLogPolling(apiUrl) {
+      stopLogPolling();
+      serviceLog.textContent = '正在读取服务日志...';
+      refreshLogs(apiUrl).catch(() => {
+        serviceLog.textContent = '日志接口暂不可用。请确认后端已更新并允许访问 /logs。';
+      });
+      logTimerId = window.setInterval(() => {
+        refreshLogs(apiUrl).catch(() => {});
+      }, 2000);
+    }
+
+    function stopLogPolling() {
+      if (logTimerId) {
+        window.clearInterval(logTimerId);
+        logTimerId = null;
       }
     }
 
@@ -467,6 +536,7 @@
       showMessage('请求已发送，正在等待远程服务返回。', '');
       setStatus('请求中', 'running');
       startTimer();
+      startLogPolling(apiUrl);
 
       try {
         const response = await fetch(apiUrl, {
@@ -480,6 +550,7 @@
 
         const data = await readResponse(response);
         stopTimer();
+        await refreshLogs(apiUrl).catch(() => {});
 
         httpStatus.textContent = `${response.status} ${response.statusText || ''}`.trim();
         businessStatus.textContent = data.ok === true ? '成功' : '失败';
@@ -494,6 +565,7 @@
         }
       } catch (error) {
         stopTimer();
+        await refreshLogs(apiUrl).catch(() => {});
         httpStatus.textContent = '请求失败';
         businessStatus.textContent = '异常';
         resultBody.textContent = JSON.stringify({
@@ -504,6 +576,7 @@
         setStatus('异常', 'error');
         showMessage('请求没有成功发出或被浏览器拦截。远程服务如跨域访问，需要允许 CORS。', 'error');
       } finally {
+        stopLogPolling();
         submitButton.disabled = false;
       }
     });

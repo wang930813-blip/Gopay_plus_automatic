@@ -19,6 +19,7 @@ import sys
 import time
 import threading
 import urllib.parse
+from collections import deque
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from pathlib import Path
@@ -32,6 +33,7 @@ import payment_pb2_grpc
 
 # ─── 配置 ───
 CONFIG_PATH = Path(__file__).parent / "config.json"
+LOG_PATH = Path(__file__).parent / "orchestrator.log"
 
 def load_config():
     with open(CONFIG_PATH, encoding="utf-8") as f:
@@ -203,6 +205,19 @@ def _sms_api_get_json_or_text(url: str):
         return resp.read().decode(errors="replace")
 
 
+def _log_response_summary(label: str, body: str):
+    summary = re.sub(r"\s+", " ", str(body or "")).strip()
+    log.info("%s: %s", label, summary[:200] or "<empty>")
+
+
+def read_recent_logs(lines: int = 120) -> list[str]:
+    safe_lines = max(1, min(int(lines or 120), 500))
+    if not LOG_PATH.exists():
+        return []
+    with open(LOG_PATH, encoding="utf-8", errors="replace") as f:
+        return list(deque((line.rstrip("\n") for line in f), maxlen=safe_lines))
+
+
 def _wait_herosms_otp(api_key: str, base_url: str, phone: str, timeout: int, poll_interval: int) -> str:
     deadline = time.time() + timeout
     activation_id = ""
@@ -217,6 +232,7 @@ def _wait_herosms_otp(api_key: str, base_url: str, phone: str, timeout: int, pol
                     "api_key": api_key,
                 })
                 body = _sms_api_get_json_or_text(active_url)
+                _log_response_summary("HeroSMS active activations response", body)
                 try:
                     activations = json.loads(body)
                 except (json.JSONDecodeError, ValueError):
@@ -233,6 +249,7 @@ def _wait_herosms_otp(api_key: str, base_url: str, phone: str, timeout: int, pol
                     "id": activation_id,
                 })
                 body = _sms_api_get_json_or_text(status_url)
+                _log_response_summary("HeroSMS getStatus response", body)
                 otp = _extract_herosms_otp(body)
                 if otp:
                     log.info("HeroSMS: got OTP %s", otp)
@@ -528,6 +545,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self._json(200, {"ok": True, "service": "gopay-plus", "otp_mode": OTP_MODE})
+            return
+        if self.path.startswith("/logs"):
+            query = urllib.parse.urlsplit(self.path).query
+            params = urllib.parse.parse_qs(query)
+            lines = int((params.get("lines") or ["120"])[0])
+            self._json(200, {"ok": True, "lines": read_recent_logs(lines)})
             return
         self._json(404, {"error": "not found"})
 
