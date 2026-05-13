@@ -11,3 +11,4 @@ def test_sms_switch_uses_resend_otp_endpoint_and_reference_payload():
     assert "https://gwa.gopayapi.com/v1/linking/resend-otp" in source
     assert 'body = {"reference_id": reference_id}' in source
     assert 'body = {"reference_id": reference_id, "otp_channel": "sms"}' not in source
+    assert "SMS switch response http" in source

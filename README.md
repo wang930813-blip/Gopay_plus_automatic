@@ -296,8 +296,8 @@ curl http://localhost:8800/health
 
   "orchestrator": {
     "port": 8800,
-    "otp_timeout": 90,
-    // 等 OTP 的最长秒数；sms_api 模式建议 ≥ 120
+    "otp_timeout": 300,
+    // 等 OTP 的最长秒数；sms_api 模式建议 300
     "auth_token": "my-secret-token-123"
     // 自定义随机字符串，调用 /subscribe 时需 Authorization: Bearer 该值
   },
@@ -313,7 +313,7 @@ curl http://localhost:8800/health
       "country": "id",
       "service": "gopay",
       "poll_interval_sec": 3,
-      "poll_timeout_sec": 90
+      "poll_timeout_sec": 300
     },
 
     "whatsapp": {
@@ -421,7 +421,7 @@ python3 otp_forwarder.py      # 保持窗口开着
 
 1. `otp.mode` = `"sms_api"`
 2. `gopay.otp_channel` = `"sms"`（让脚本在 consent 后切换 SMS 通道）
-3. `orchestrator.otp_timeout` ≥ **120**（因为要等 30 秒倒计时 + SMS 送达）
+3. `orchestrator.otp_timeout` 和 `otp.sms_api.poll_timeout_sec` 建议设为 **300**（因为要等倒计时、SMS 重发和接码平台收短信）
 
 关键字段（合并摘录）：
 
@@ -432,13 +432,14 @@ python3 otp_forwarder.py      # 保持窗口开着
     "sms_switch_countdown_sec": 30,
     "sms_switch_endpoint": "https://gwa.gopayapi.com/v1/linking/resend-otp"
   },
-  "orchestrator": { "otp_timeout": 120 },
+  "orchestrator": { "otp_timeout": 300 },
   "otp": {
     "mode": "sms_api",
     "sms_api": {
       "api_key": "你的key",
       "provider": "herosms",
-      "base_url": "https://hero-sms.com/stubs/handler_api.php"
+      "base_url": "https://hero-sms.com/stubs/handler_api.php",
+      "poll_timeout_sec": 300
     }
   }
 }

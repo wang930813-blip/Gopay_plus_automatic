@@ -15,8 +15,8 @@
   "proxy": "socks5://127.0.0.1:1080",
   "orchestrator": {
     "port": 8800,
-    "otp_timeout": 90,
-    "___otp_timeout_tip___": "SMS 模式建议设 120+，因为 consent 后会先等 30 秒倒计时再切 SMS，然后还要等接码平台收短信",
+    "otp_timeout": 300,
+    "___otp_timeout_tip___": "SMS 模式建议设 300，因为 consent 后会先等倒计时再切 SMS，然后还要等接码平台收短信",
     "auth_token": "自定义随机字符串"
   },
   "otp": {
@@ -30,7 +30,7 @@
       "country": "id",
       "service": "gopay",
       "poll_interval_sec": 3,
-      "poll_timeout_sec": 90
+      "poll_timeout_sec": 300
     },
     "whatsapp": {
       "grpc_addr": "127.0.0.1:50056"

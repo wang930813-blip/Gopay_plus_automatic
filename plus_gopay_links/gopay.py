@@ -720,6 +720,7 @@ class GoPayCharger:
                 )
                 # 不 raise — WhatsApp OTP 仍然有效；SMS 接码平台也可能正常拿到号
                 return
+            self.log(f"[gopay] SMS switch response http {r.status_code}: {r.text[:200]}")
             self.log("[gopay] switched OTP delivery to SMS")
         except Exception as e:
             self.log(f"[gopay] SMS switch request failed: {e}（WhatsApp OTP 仍然有效）")

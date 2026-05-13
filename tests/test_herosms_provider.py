@@ -102,3 +102,10 @@ def test_herosms_request_headers_use_browser_user_agent():
 
     assert "Mozilla/5.0" in headers["User-Agent"]
     assert headers["Accept"] == "application/json,text/plain,*/*"
+
+
+def test_sms_api_timeout_uses_provider_poll_timeout_when_configured():
+    orch = load_orchestrator()
+
+    assert orch._sms_api_timeout({"poll_timeout_sec": 300}, 90) == 300
+    assert orch._sms_api_timeout({"poll_timeout_sec": ""}, 90) == 90

@@ -188,6 +188,13 @@ def _sms_api_headers():
     }
 
 
+def _sms_api_timeout(sms_cfg: dict, default_timeout: int) -> int:
+    raw_timeout = sms_cfg.get("poll_timeout_sec")
+    if raw_timeout in (None, ""):
+        return default_timeout
+    return int(raw_timeout)
+
+
 def _sms_api_get_json_or_text(url: str):
     import urllib.request
 
@@ -259,6 +266,7 @@ def _wait_sms_api_otp(phone: str, issued_after: int, timeout: int) -> str:
     base_url = sms_cfg.get("base_url", "").rstrip("/")
     provider = sms_cfg.get("provider", "").lower()
     poll_interval = int(sms_cfg.get("poll_interval_sec", 3))
+    timeout = _sms_api_timeout(sms_cfg, timeout)
     
     if not api_key or not base_url:
         log.error("sms_api 配置不完整（缺少 api_key 或 base_url）")
