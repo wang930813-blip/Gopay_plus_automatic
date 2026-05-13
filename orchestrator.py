@@ -17,6 +17,7 @@ import re
 import sys
 import time
 import threading
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from pathlib import Path
@@ -32,7 +33,7 @@ import payment_pb2_grpc
 CONFIG_PATH = Path(__file__).parent / "config.json"
 
 def load_config():
-    with open(CONFIG_PATH) as f:
+    with open(CONFIG_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 CFG = load_config()
@@ -94,6 +95,125 @@ def _wait_manual_otp(issued_after: int, timeout: int, phone: str = "") -> str:
 
 
 # ─── SMS API 模式：轮询接码平台 ───
+def _build_sms_api_url(base_url: str, params: dict) -> str:
+    parts = urllib.parse.urlsplit(base_url)
+    query = dict(urllib.parse.parse_qsl(parts.query, keep_blank_values=True))
+    query.update({k: str(v) for k, v in params.items() if v is not None and v != ""})
+    return urllib.parse.urlunsplit((
+        parts.scheme,
+        parts.netloc,
+        parts.path,
+        urllib.parse.urlencode(query),
+        parts.fragment,
+    ))
+
+
+def _normalize_phone(value: str) -> str:
+    return re.sub(r"\D", "", str(value or ""))
+
+
+def _find_herosms_activation_id(activations, phone: str) -> str:
+    target = _normalize_phone(phone)
+    if not target:
+        return ""
+
+    if isinstance(activations, dict):
+        for key in ("activeActivations", "activations", "data", "items"):
+            if isinstance(activations.get(key), list):
+                activations = activations[key]
+                break
+        else:
+            activations = [activations]
+
+    for item in activations or []:
+        if not isinstance(item, dict):
+            continue
+
+        item_phone = _normalize_phone(
+            item.get("phoneNumber") or item.get("phone") or item.get("number")
+        )
+        if not item_phone:
+            continue
+
+        if item_phone.endswith(target) or target.endswith(item_phone):
+            activation_id = item.get("activationId") or item.get("id")
+            return str(activation_id or "")
+
+    return ""
+
+
+def _extract_herosms_otp(body: str) -> str:
+    try:
+        data = json.loads(body)
+        text = str(
+            data.get("sms") or data.get("text") or data.get("code") or
+            data.get("message") or data.get("status") or body
+        )
+    except (json.JSONDecodeError, ValueError, AttributeError):
+        text = body
+
+    if "STATUS_WAIT" in text or "NO_ACTIVATION" in text:
+        return ""
+
+    match = re.search(r"\b(\d{6})\b", text)
+    if match:
+        return match.group(1)
+
+    return ""
+
+
+def _sms_api_get_json_or_text(url: str):
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"Accept": "application/json,text/plain,*/*"})
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        return resp.read().decode(errors="replace")
+
+
+def _wait_herosms_otp(api_key: str, base_url: str, phone: str, timeout: int, poll_interval: int) -> str:
+    deadline = time.time() + timeout
+    activation_id = ""
+
+    log.info("HeroSMS: polling active activations for phone=***%s", phone[-4:])
+
+    while time.time() < deadline:
+        try:
+            if not activation_id:
+                active_url = _build_sms_api_url(base_url, {
+                    "action": "getActiveActivations",
+                    "api_key": api_key,
+                })
+                body = _sms_api_get_json_or_text(active_url)
+                try:
+                    activations = json.loads(body)
+                except (json.JSONDecodeError, ValueError):
+                    activations = []
+
+                activation_id = _find_herosms_activation_id(activations, phone)
+                if activation_id:
+                    log.info("HeroSMS: matched activation id=%s for phone=***%s", activation_id, phone[-4:])
+
+            if activation_id:
+                status_url = _build_sms_api_url(base_url, {
+                    "action": "getStatus",
+                    "api_key": api_key,
+                    "id": activation_id,
+                })
+                body = _sms_api_get_json_or_text(status_url)
+                otp = _extract_herosms_otp(body)
+                if otp:
+                    log.info("HeroSMS: got OTP %s", otp)
+                    return otp
+
+        except Exception as e:
+            log.warning("HeroSMS API error: %s", e)
+
+        time.sleep(poll_interval)
+
+    log.warning("HeroSMS: timeout after %ds", timeout)
+    return ""
+
+
 def _wait_sms_api_otp(phone: str, issued_after: int, timeout: int) -> str:
     """轮询接码平台 API 获取 SMS OTP。
     
@@ -111,6 +231,7 @@ def _wait_sms_api_otp(phone: str, issued_after: int, timeout: int) -> str:
     sms_cfg = OTP_CFG.get("sms_api", {})
     api_key = sms_cfg.get("api_key", "")
     base_url = sms_cfg.get("base_url", "").rstrip("/")
+    provider = sms_cfg.get("provider", "").lower()
     poll_interval = int(sms_cfg.get("poll_interval_sec", 3))
     
     if not api_key or not base_url:
@@ -119,12 +240,20 @@ def _wait_sms_api_otp(phone: str, issued_after: int, timeout: int) -> str:
     
     deadline = time.time() + timeout
     log.info("SMS API: polling for phone=***%s timeout=%ds", phone[-4:], timeout)
-    
+
+    if provider == "herosms" or "hero-sms.com" in base_url:
+        return _wait_herosms_otp(api_key, base_url, phone, timeout, poll_interval)
+
     while time.time() < deadline:
         try:
             # ═══ 构造请求 URL ═══
             # 通用格式（根据你的平台修改）：
-            url = f"{base_url}?action=get_sms&api_key={api_key}&phone={phone}&country=id"
+            url = _build_sms_api_url(base_url, {
+                "action": "get_sms",
+                "api_key": api_key,
+                "phone": phone,
+                "country": sms_cfg.get("country", "id"),
+            })
             
             # 发请求
             req = urllib.request.Request(url, headers={"Accept": "application/json"})

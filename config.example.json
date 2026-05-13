@@ -26,7 +26,7 @@
     "sms_api": {
       "provider": "herosms",
       "api_key": "",
-      "base_url": "https://api.herosms.com",
+      "base_url": "https://hero-sms.com/stubs/handler_api.php",
       "country": "id",
       "service": "gopay",
       "poll_interval_sec": 3,

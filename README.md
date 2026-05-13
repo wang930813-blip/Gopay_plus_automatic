@@ -309,7 +309,7 @@ curl http://localhost:8800/health
     "sms_api": {
       "provider": "herosms",
       "api_key": "",
-      "base_url": "https://api.herosms.com",
+      "base_url": "https://hero-sms.com/stubs/handler_api.php",
       "country": "id",
       "service": "gopay",
       "poll_interval_sec": 3,
@@ -437,7 +437,8 @@ python3 otp_forwarder.py      # 保持窗口开着
     "mode": "sms_api",
     "sms_api": {
       "api_key": "你的key",
-      "base_url": "https://api.你的平台.com"
+      "provider": "herosms",
+      "base_url": "https://hero-sms.com/stubs/handler_api.php"
     }
   }
 }
@@ -447,22 +448,30 @@ python3 otp_forwarder.py      # 保持窗口开着
 
 接码平台对接：
 
-编排器默认请求：
+HeroSMS 使用 SMS-Activate 风格接口。编排器会先请求：
 
 ```
-GET {base_url}?action=get_sms&api_key={你的key}&phone={手机号}&country=id
+GET {base_url}?action=getActiveActivations&api_key={你的key}
 ```
 
-再从响应文本里自动提取 6 位数字（`\b\d{6}\b`）。
+从活跃订单中匹配当前手机号，拿到 activation id 后轮询：
 
-如果你的平台 URL 格式不同，直接改 `orchestrator.py` 里 `_wait_sms_api_otp` 函数的 URL 构造即可，响应解析是通用的。
+```
+GET {base_url}?action=getStatus&api_key={你的key}&id={activation_id}
+```
+
+再从 `STATUS_OK:123456` 或 JSON 响应文本里自动提取 6 位数字（`\b\d{6}\b`）。
+
+如果你的平台不是 HeroSMS，编排器仍保留通用 `get_sms` 请求格式，可按你的平台修改 `orchestrator.py` 里 `_wait_sms_api_otp` 函数的 URL 构造。
 
 常见平台参考：
 
 ```
 HeroSMS:
-  GET https://api.herosms.com/api/get_sms?api_key=KEY&phone=PHONE
-  返回：{"sms": "Your verification code is 123456"}
+  base_url = https://hero-sms.com/stubs/handler_api.php
+  GET ?action=getActiveActivations&api_key=KEY
+  GET ?action=getStatus&api_key=KEY&id=ORDER_ID
+  返回：STATUS_OK:123456
 
 5sim:
   GET https://5sim.net/v1/user/check/{order_id}
