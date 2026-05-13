@@ -119,12 +119,17 @@ def _find_herosms_activation_id(activations, phone: str) -> str:
         return ""
 
     if isinstance(activations, dict):
+        candidates = []
         for key in ("activeActivations", "activations", "data", "items"):
-            if isinstance(activations.get(key), list):
-                activations = activations[key]
-                break
-        else:
-            activations = [activations]
+            value = activations.get(key)
+            if isinstance(value, list):
+                candidates.extend(value)
+            elif isinstance(value, dict):
+                for nested_key in ("rows", "row", "items", "data"):
+                    nested = value.get(nested_key)
+                    if isinstance(nested, list):
+                        candidates.extend(nested)
+        activations = candidates or [activations]
 
     for item in activations or []:
         if not isinstance(item, dict):
@@ -172,10 +177,21 @@ def _create_ssl_context():
         return ssl.create_default_context()
 
 
+def _sms_api_headers():
+    return {
+        "Accept": "application/json,text/plain,*/*",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+    }
+
+
 def _sms_api_get_json_or_text(url: str):
     import urllib.request
 
-    req = urllib.request.Request(url, headers={"Accept": "application/json,text/plain,*/*"})
+    req = urllib.request.Request(url, headers=_sms_api_headers())
     with urllib.request.urlopen(req, timeout=8, context=_create_ssl_context()) as resp:
         return resp.read().decode(errors="replace")
 

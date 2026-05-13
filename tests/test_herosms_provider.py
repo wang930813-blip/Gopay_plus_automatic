@@ -51,6 +51,22 @@ def test_match_herosms_activation_by_full_or_suffix_phone():
     assert orch._find_herosms_activation_id(activations, "01215") == "new"
 
 
+def test_match_herosms_activation_from_active_activations_rows():
+    orch = load_orchestrator()
+    response = {
+        "status": "success",
+        "data": [],
+        "activeActivations": {
+            "row": [],
+            "rows": [
+                {"activationId": "row-id", "phoneNumber": "6281947801215"},
+            ],
+        },
+    }
+
+    assert orch._find_herosms_activation_id(response, "81947801215") == "row-id"
+
+
 def test_parse_herosms_otp_from_status_text_or_json():
     orch = load_orchestrator()
 
@@ -77,3 +93,12 @@ def test_create_ssl_context_prefers_certifi(monkeypatch):
 
     assert orch._create_ssl_context() == "ssl-context"
     assert calls["cafile"] == "/tmp/certifi-ca.pem"
+
+
+def test_herosms_request_headers_use_browser_user_agent():
+    orch = load_orchestrator()
+
+    headers = orch._sms_api_headers()
+
+    assert "Mozilla/5.0" in headers["User-Agent"]
+    assert headers["Accept"] == "application/json,text/plain,*/*"
