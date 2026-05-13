@@ -1,4 +1,5 @@
 import importlib.util
+import ssl
 import sys
 import types
 from pathlib import Path
@@ -56,3 +57,23 @@ def test_parse_herosms_otp_from_status_text_or_json():
     assert orch._extract_herosms_otp("STATUS_OK:654321") == "654321"
     assert orch._extract_herosms_otp('{"status":"STATUS_OK","sms":"Your code is 123456"}') == "123456"
     assert orch._extract_herosms_otp("STATUS_WAIT_CODE") == ""
+
+
+def test_create_ssl_context_prefers_certifi(monkeypatch):
+    orch = load_orchestrator()
+    calls = {}
+
+    class FakeCertifi:
+        @staticmethod
+        def where():
+            return "/tmp/certifi-ca.pem"
+
+    def fake_create_default_context(cafile=None):
+        calls["cafile"] = cafile
+        return "ssl-context"
+
+    monkeypatch.setitem(sys.modules, "certifi", FakeCertifi)
+    monkeypatch.setattr(ssl, "create_default_context", fake_create_default_context)
+
+    assert orch._create_ssl_context() == "ssl-context"
+    assert calls["cafile"] == "/tmp/certifi-ca.pem"

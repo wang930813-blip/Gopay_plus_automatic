@@ -14,6 +14,7 @@ OTP 模式（config.json → otp.mode）：
 import json
 import logging
 import re
+import ssl
 import sys
 import time
 import threading
@@ -162,11 +163,20 @@ def _extract_herosms_otp(body: str) -> str:
     return ""
 
 
+def _create_ssl_context():
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
 def _sms_api_get_json_or_text(url: str):
     import urllib.request
 
     req = urllib.request.Request(url, headers={"Accept": "application/json,text/plain,*/*"})
-    with urllib.request.urlopen(req, timeout=8) as resp:
+    with urllib.request.urlopen(req, timeout=8, context=_create_ssl_context()) as resp:
         return resp.read().decode(errors="replace")
 
 
