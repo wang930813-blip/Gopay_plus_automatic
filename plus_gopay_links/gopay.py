@@ -292,9 +292,26 @@ class GoPayCharger:
                 return ((action.get("redirect_to_url") or {}).get("url") or "").strip()
         return ""
 
+    @staticmethod
+    def _stripe_expected_amount(init_data: dict) -> str:
+        payment_page = init_data.get("payment_page") or {}
+        invoice = init_data.get("invoice") or {}
+        for source, keys in (
+            (payment_page, ("amount_total", "amount", "line_item_amount_total")),
+            (invoice, ("amount_due", "total")),
+        ):
+            if not isinstance(source, dict):
+                continue
+            for key in keys:
+                amount = source.get(key)
+                if amount is not None and amount != "":
+                    return str(amount)
+        return "0"
+
     def _stripe_confirm(self, cs_id: str, pm_id: str, stripe_pk: str) -> dict:
         init_data = self._stripe_init(cs_id, stripe_pk)
         init_checksum = init_data.get("init_checksum", "")
+        expected_amount = self._stripe_expected_amount(init_data)
         # Stripe 需要 return_url 才会把 checkout 推进到 requires_action（带 setup_intent）
         chatgpt_return = (
             f"https://chatgpt.com/checkout/verify?stripe_session_id={cs_id}"
@@ -312,7 +329,7 @@ class GoPayCharger:
             "payment_method": pm_id,
             "init_checksum": init_checksum,
             "version": self.runtime.get("version") or "fed52f3bc6",
-            "expected_amount": "0",
+            "expected_amount": expected_amount,
             "expected_payment_method_type": "gopay",
             "return_url": return_url,
             "elements_session_client[session_id]": f"elements_session_{uuid.uuid4().hex[:11]}",
